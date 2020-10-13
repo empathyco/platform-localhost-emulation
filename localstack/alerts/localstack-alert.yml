@@ -1,0 +1,9 @@
+rules:
+  - alert: "Empathy-{{ include "localstack.fullname" .}}-mem-usage"
+    expr: jvm_memory_bytes_used{namespace="{{ $.Release.Namespace }}", service="{{ include "localstack.fullname" . }}", area="heap"}/jvm_memory_bytes_max{namespace="{{ $.Release.Namespace }}", area="heap"} > 80
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Service - {{`{{$labels.service}}`}} user too much mem"
+      description: "Alarm - {{`{{$labels.service}}`}} reports that is using more than 80% of mem ($value) Please check it"

@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  {{- toYaml .Values.environmentalVars | nindent 2 }}
+kind: ConfigMap
+metadata:
+  annotations:
+  labels:
+    {{- include "gcp-emulator.labels" . | nindent 4 }}
+  name: {{ include "gcp-emulator.fullname" . }}

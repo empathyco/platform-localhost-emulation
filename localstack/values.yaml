@@ -1,0 +1,113 @@
+# Default values for empathy-localstack.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+replicaCount: 1
+# Number maximun of replica for horizontal autoscaling
+hpa:
+  max: 1
+# Deploying strategy, please choose the one that fix you better
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+deployingStrategy:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+       maxUnavailable: 20%
+       maxSurge: 1
+# change your service image
+image:
+  repository: localstack/localstack
+  pullPolicy: IfNotPresent
+# Configuration for private repository
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+# Secrets section
+secrets:  
+  create: false
+  # Create secret for gsp service account
+  # it will be created from file serviceaccount/key.json
+  GCPServiceAccount: false
+ # Example of secrets
+  vars:
+    
+environmentalVars:
+  # Example of environmental vars
+  #SERVICES: "serverless"
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+# Monitoring with prometheus please change annotations to match the proper prometheus server
+prometheus:
+  enabled: false
+  annotations:
+    release: prometheus
+    app: prometheus-operator
+  # This will create a nginx exporter to monitor nginx services
+  # This is made for static web (Front end)
+  exporter:
+    create: false
+    image:
+      repository: bitnami/nginx-exporter
+      tag: 0.6.0-debian-10-r20
+      pullPolicy: IfNotPresent
+# Service configuration 
+service:
+  type: ClusterIP
+  port: 4566
+  # metrics for nginx exporter runs in 9113
+  metricsPort: 8081
+  #healthcheck: /health
+  livenessProbe:
+    exec:
+      command:
+      - bash
+      - -c
+      - awslocal s3api list-buckets 
+    failureThreshold: 300
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 10
+  readinessProbe:
+    exec:
+      command:
+      - bash
+      - -c
+      - awslocal s3api list-buckets 
+    failureThreshold: 300
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 10
+# Ingress Configuration
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: localstack.localhost
+      paths: 
+      - /
+
+# We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user. This also increases chances charts run on environments with little
+# resources, such as Minikube. If you do want to specify resources, uncomment the following
+# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+resources:
+  limits:
+    cpu: 1
+    memory: 1000Mi
+  requests:
+    cpu: 1
+    memory: 1000Mi
+
+podSecurityContext: {}
+
+securityContext: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

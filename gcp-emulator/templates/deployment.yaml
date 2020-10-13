@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gcp-emulator.fullname" . }}
+  labels:
+    {{- include "gcp-emulator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  {{- toYaml .Values.deployingStrategy | nindent 2 }}
+  selector:
+    matchLabels:
+      {{- include "gcp-emulator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "gcp-emulator.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "gcp-emulator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.secrets.GCPServiceAccount }}
+      volumes:
+        - name: google-cloud-key
+          secret:
+            secretName: {{ include "gcp-emulator.fullname" . }}-sa
+      {{- end }}
+      containers:
+        {{ if and ( eq .Values.prometheus.enabled true) ( eq .Values.prometheus.exporter.create true )}}
+        - name: metrics
+          image: "{{ .Values.prometheus.exporter.image.repository }}:{{ .Values.prometheus.exporter.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          command: ['/usr/bin/exporter', '-nginx.scrape-uri', 'http://127.0.0.1:8080/status']
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+        {{ end }}
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Chart.AppVersion }}"
+          command: ["gcloud", "beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8085", "--project=test"]
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{ if .Values.secrets.GCPServiceAccount }}
+          volumeMounts:
+            - name: google-cloud-key
+              mountPath: /var/secrets/google
+          {{ end }}
+          envFrom:
+          - configMapRef:
+              name: {{ include "gcp-emulator.fullname" . }}
+          env:
+          {{ if .Values.secrets.create }}
+          {{ range $key, $value := .Values.secrets.vars -}}
+          - name: {{ $key }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "gcp-emulator.fullname" $ }} 
+                key: {{ $key }}
+          {{ end }}
+          {{end}}
+          {{- if .Values.secrets.GCPServiceAccount }}
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /var/secrets/google/key.json
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            {{ if and ( eq .Values.prometheus.enabled true) (not .Values.prometheus.exporter.create)}}
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+              protocol: TCP
+            {{ end }}
+          # livenessProbe:
+          #   httpGet:
+          #     path: "{{ .Values.service.healthcheck }}"
+          #     port: http
+          #   failureThreshold: {{ .Values.service.livenessProbe.failureThreshold }}
+          #   periodSeconds: {{ .Values.service.livenessProbe.periodSeconds }}
+          #   successThreshold: {{ .Values.service.livenessProbe.successThreshold }}
+          #   timeoutSeconds: {{ .Values.service.livenessProbe.timeoutSeconds }}
+          # readinessProbe:
+          #   httpGet:
+          #     path: "{{ .Values.service.healthcheck }}"
+          #     port: http
+          #   failureThreshold: {{ .Values.service.readinessProbe.failureThreshold }}
+          #   periodSeconds: {{ .Values.service.readinessProbe.periodSeconds }}
+          #   successThreshold: {{ .Values.service.readinessProbe.successThreshold }}
+          #   timeoutSeconds: {{ .Values.service.readinessProbe.timeoutSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

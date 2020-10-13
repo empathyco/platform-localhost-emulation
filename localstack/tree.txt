@@ -1,0 +1,28 @@
+localstack
+├── Chart.yaml
+├── README.md
+├── alerts
+│   └── localstack-alerts.yml
+├── charts
+├── dashboards
+├── serviceaccount
+├── templates
+│   ├── NOTES.txt
+│   ├── _helpers.tpl
+│   ├── alerts.yaml
+│   ├── configmap-dashboard.yaml
+│   ├── configmap.yaml
+│   ├── deployment.yaml
+│   ├── hpa.yml
+│   ├── ingress.yaml
+│   ├── monitoring.yaml
+│   ├── secret-sa.yaml
+│   ├── secret.yaml
+│   ├── service.yaml
+│   ├── serviceaccount.yaml
+│   └── tests
+│       └── test-connection.yaml
+├── tree.txt
+└── values.yaml
+
+6 directories, 19 files

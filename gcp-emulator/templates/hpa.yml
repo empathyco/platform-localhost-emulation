@@ -1,0 +1,15 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  annotations:
+  labels:
+    {{- include "gcp-emulator.labels" . | nindent 4 }}
+  name: {{ include "gcp-emulator.fullname" . }}
+spec:
+  maxReplicas: {{ .Values.hpa.max }}
+  minReplicas: {{ .Values.replicaCount }}
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: {{ include "gcp-emulator.fullname" . }}
+  targetCPUUtilizationPercentage: 50

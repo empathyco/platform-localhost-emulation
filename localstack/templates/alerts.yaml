@@ -1,0 +1,15 @@
+{{- if .Values.prometheus.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml .Values.prometheus.annotations  | nindent 4}}
+    {{- include "localstack.labels" . | nindent 4 }}
+  name: {{ include "localstack.fullname" . }}
+spec:
+  groups:
+  {{ range $path, $bytes := .Files.Glob "alerts/*.yml" -}}
+  - name: {{ $path }}
+    {{ tpl ($.Files.Get $path) $ | nindent 4 }}
+  {{ end -}}
+{{- end }}

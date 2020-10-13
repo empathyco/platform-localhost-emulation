@@ -1,0 +1,20 @@
+{{- if .Values.prometheus.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    {{- include "gcp-emulator.labels" . | nindent 4 }}
+  {{- toYaml .Values.prometheus.annotations  | nindent 4}}
+  name: {{ include "gcp-emulator.fullname" . }}
+spec:
+  endpoints:
+  - honorLabels: true
+    port: metrics
+  selector:
+    matchLabels:
+      {{- include "gcp-emulator.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+
+{{- end }}

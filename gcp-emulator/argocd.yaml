@@ -1,0 +1,25 @@
+{{- if .Values.argocd.enabled -}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    {{- include "gcp-emulator.labels" . | nindent 4 }}
+  name: {{ include "gcp-emulator.fullname" . }}
+  namespace: argocd
+spec:
+  project: "{{ .Values.argocd.project }}"
+  source:
+    repoURL: https://bitbucket.org/colbenson/gcp-k8s-services.git
+    targetRevision: "{{ .Values.argocd.branch }}"
+    path: "{{ .Values.argocd.path }}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: "{{ .Release.Namespace }}"
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true # Specifies if resources should be pruned during auto-syncing ( false by default ).
+      selfHeal: true # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+    validate: true # Validate resources before applying to k8s, defaults to true.
+{{- end }}
+

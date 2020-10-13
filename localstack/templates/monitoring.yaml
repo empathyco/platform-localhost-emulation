@@ -1,0 +1,20 @@
+{{- if .Values.prometheus.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    {{- include "localstack.labels" . | nindent 4 }}
+  {{- toYaml .Values.prometheus.annotations  | nindent 4}}
+  name: {{ include "localstack.fullname" . }}
+spec:
+  endpoints:
+  - honorLabels: true
+    port: metrics
+  selector:
+    matchLabels:
+      {{- include "localstack.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+
+{{- end }}
